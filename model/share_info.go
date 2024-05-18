@@ -9,13 +9,14 @@ import (
 
 type ShareInfoForm struct {
 	*Base
-	bun.BaseModel `bun:"table:share_info,alias:si"`
+	bun.BaseModel `bun:"table:chat_share_info,alias:csi"`
 	TenantId      string    `json:"tenant_id" bun:"tenant_id,type:uuid,notnull"`
 	ShareType     string    `json:"share_type" bun:"share_type,type:text,notnull"` //zalo,fb,....
 	ShareForm     ShareForm `json:"share_form" bun:"share_form,type:jsonb,notnull"`
 }
 
 type ShareInfoFormRequest struct {
+	Id             string                `form:"id"`
 	ShareType      string                `form:"share_type" binding:"required"`
 	EventName      string                `form:"event_name"`
 	AppId          string                `form:"app_id" binding:"required"`
@@ -66,9 +67,6 @@ func (s *ShareInfoFormRequest) Validate() (err error) {
 	if len(s.OaId) < 1 {
 		return errors.New("oa id is required")
 	}
-	// if len(s.ExternalUserId) < 1 {
-	// 	return errors.New("external_user_id is required")
-	// }
 	return
 }
 

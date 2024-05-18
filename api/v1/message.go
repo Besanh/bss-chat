@@ -16,12 +16,12 @@ type Message struct {
 	messageService service.IMessage
 }
 
-func NewMessage(r *gin.Engine, messageService service.IMessage) {
+func NewMessage(engine *gin.Engine, messageService service.IMessage) {
 	handler := &Message{
 		messageService: messageService,
 	}
 
-	Group := r.Group("bss-message/v1/message")
+	Group := engine.Group("bss-message/v1/message")
 	{
 		Group.POST("send", handler.SendMessage)
 		Group.GET("", handler.GetMessages)
@@ -52,6 +52,7 @@ func (h *Message) SendMessage(c *gin.Context) {
 		message.EventName = messageForm.EventName
 		message.AppId = messageForm.AppId
 		message.ConversationId = messageForm.ConversationId
+		file = messageForm.File
 	} else {
 		jsonBody := make(map[string]any, 0)
 		if err := c.ShouldBind(&jsonBody); err != nil {

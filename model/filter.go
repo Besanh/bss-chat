@@ -37,11 +37,11 @@ type QueueFilter struct {
 	ChatRoutingId string
 }
 
-type ChatQueueAgentFilter struct {
-	TenantId string `json:"tenant_id"`
-	QueueId  []string
-	AgentId  []string
-	Source   string
+type ChatQueueUserFilter struct {
+	TenantId string   `json:"tenant_id"`
+	QueueId  []string `json:"queue_id"`
+	UserId   []string `json:"user_id"`
+	Source   string   `json:"source"`
 }
 
 type ChatRoutingFilter struct {
@@ -52,27 +52,29 @@ type ChatRoutingFilter struct {
 }
 
 type ConversationFilter struct {
-	AppId          []string `json:"app_id"`
-	TenantId       string   `json:"tenant_id"`
-	ConversationId []string `json:"conversation_id"`
-	Username       string   `json:"username"`
-	PhoneNumber    string   `json:"phone_number"`
-	Email          string   `json:"email"`
-	Insensitive    string   `json:"insensitive"`
+	AppId          []string     `json:"app_id"`
+	TenantId       string       `json:"tenant_id"`
+	ConversationId []string     `json:"conversation_id"`
+	Username       string       `json:"username"`
+	PhoneNumber    string       `json:"phone_number"`
+	Email          string       `json:"email"`
+	Insensitive    string       `json:"insensitive"`
+	IsDone         sql.NullBool `json:"is_done"`
 }
 
-type AgentAllocationFilter struct {
+type UserAllocateFilter struct {
 	TenantId       string   `json:"tenant_id"`
 	AppId          string   `json:"app_id"`
+	OaId           string   `json:"oa_id"`
 	ConversationId string   `json:"conversation_id"`
-	AgentId        []string `json:"agent_id"`
+	UserId         []string `json:"user_id"`
 	QueueId        string   `json:"queue_id"`
 	AllocatedTime  int64    `json:"allocated_time"`
 	MainAllocate   string   `json:"main_allocate"`
 }
 
 type MessageFilter struct {
-	TenantId            []string        `json:"tenant_id"`
+	TenantId            string          `json:"tenant_id"`
 	MessageId           []string        `json:"message_id"`
 	ParentMessageId     string          `json:"parent_message_id"`
 	ConversationId      string          `json:"conversation_id"`
@@ -106,10 +108,25 @@ type ShareInfoFormFilter struct {
 	ShareType string `json:"share_type"`
 	AppId     string `json:"app_id"`
 	OaId      string `json:"oa_id"`
-	UserId    string `json:"user_id"`
+	Title     string `json:"title"`
+	Subtitle  string `json:"subtitle"`
 }
 
 type FacebookPageFilter struct {
 	OaId   string `json:"oa_id"`
 	OaName string `json:"oa_name"`
+}
+
+type ChatManageQueueUserFilter struct {
+	ConnectionId string `json:"connection_id"`
+	QueueId      string `json:"queue_id"`
+	ManageId     string `json:"manage_id"`
+}
+
+type UserInQueueFilter struct {
+	AppId            string `json:"app_id"`
+	OaId             string `json:"oa_id"`
+	ConversationId   string `json:"conversation_id"`
+	ConversationType string `json:"conversation_type"`
+	Status           string `json:"status"`
 }

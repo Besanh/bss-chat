@@ -1,6 +1,6 @@
 ## Builder
 FROM golang:1.21-alpine as builder
-WORKDIR /go/src/bss-chat-api
+WORKDIR /go/src/pitel-api
 COPY . .
 RUN go get .
 RUN go build -o app.exe .
@@ -19,7 +19,7 @@ ENV TZ Asia/Ho_Chi_Minh
 EXPOSE 8000
 
 # Add from source to /app
-COPY --from=builder /go/src/bss-chat-api/app.exe /app
+COPY --from=builder /go/src/pitel-api/app.exe /app
 RUN echo > /app/.env
 
 # Run the binary program produced by `go install`

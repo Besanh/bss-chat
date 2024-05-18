@@ -28,25 +28,32 @@ var (
 	ES_INDEX_CONVERSATION = "" // = "pitel_bss_conversation"
 
 	// Redis
-	CONVERSATION            = "conversation"
-	CONVERSATION_EXPIRE     = 30 * time.Minute
-	CHAT_QUEUE              = "chat_queue"
-	CHAT_QUEUE_EXPIRE       = 30 * time.Minute
-	CHAT_ROUTING            = "chat_routing"
-	CHAT_ROUTING_EXPIRE     = 1 * time.Hour
-	CHAT_QUEUE_AGENT        = "chat_queue_agent"
-	CHAT_QUEUE_AGENT_EXPIRE = 10 * time.Minute
-	CHAT_APP                = "chat_app"
-	CHAT_APP_EXPIRE         = 5 * time.Hour
-	AGENT_ALLOCATION        = "agent_allocation"
-	AGENT_ALLOCATION_EXPIRE = 1 * time.Hour
+	CONVERSATION             = "conversation"
+	CONVERSATION_EXPIRE      = 30 * time.Minute
+	CHAT_QUEUE               = "chat_queue"
+	CHAT_QUEUE_EXPIRE        = 30 * time.Minute
+	CHAT_ROUTING             = "chat_routing"
+	CHAT_ROUTING_EXPIRE      = 1 * time.Hour
+	CHAT_QUEUE_USER          = "chat_queue_user"
+	CHAT_QUEUE_USER_EXPIRE   = 10 * time.Minute
+	CHAT_APP                 = "chat_app"
+	CHAT_APP_EXPIRE          = 6 * time.Hour
+	USER_ALLOCATE            = "user_allocate"
+	USER_ALLOCATE_EXPIRE     = 1 * time.Hour
+	MANAGE_QUEUE_USER        = "manage_queue_user"
+	MANAGE_QUEUE_USER_EXPIRE = 1 * time.Hour
+	CHAT_CONNECTION          = "chat_connection"
+	CHAT_CONNECTION_EXPIRE   = 5 * time.Minute
 
 	ORIGIN_LIST = []string{"localhost:*", "*.tel4vn.com"}
 
-	OTT_URL             string = ""
-	API_SHARE_INFO_HOST string = ""
-	API_DOC             string = ""
-	API_CRM             string = ""
+	OTT_URL              string = ""
+	OTT_VERSION          string = ""
+	API_SHARE_INFO_HOST  string = ""
+	API_DOC              string = ""
+	API_CRM              string = ""
+	ENABLE_PUBLISH_ADMIN bool   = false
+	AAA_HOST             string = ""
 )
 
 type (
@@ -71,14 +78,18 @@ type (
 		SubscribeAt        time.Time   `json:"subscribe_at"`
 		IsAssignRoundRobin bool        `json:"is_assign_round_robin"`
 		Source             string      `json:"source"`
+		QueueId            string      `json:"queue_id"`      //use for allocate manager
+		ConnectionId       string      `json:"connection_id"` // use for allocate
 	}
 
 	Subscribers struct {
 		SubscriberMessageBuffer int
 		PublishLimiter          *rate.Limiter
 		SubscribersMu           sync.Mutex
-		Subscribers             map[*Subscriber]struct{}
+		Subscribers             SubscriberItem
 	}
+
+	SubscriberItem map[*Subscriber]struct{}
 )
 
 func NewDBConn(tenantId string, config DBConfig) (dbConn sqlclient.ISqlClientConn, err error) {
@@ -138,6 +149,9 @@ func GetDBConnOfUser(user model.AuthUser) (dbConn sqlclient.ISqlClientConn, err 
 
 func HandleGetDBConSource(authUser *model.AuthUser) (sqlclient.ISqlClientConn, error) {
 	var dbCon sqlclient.ISqlClientConn
+	if authUser == nil {
+		return nil, errors.New("authUser is nil")
+	}
 	if len(authUser.Source) < 1 || authUser.Source == "authen" {
 		dbCon = repository.DBConn
 	} else {

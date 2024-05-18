@@ -14,32 +14,31 @@ import (
 	"github.com/tel4vn/fins-microservices/common/log"
 	"github.com/tel4vn/fins-microservices/common/util"
 	"github.com/tel4vn/fins-microservices/model"
+	"github.com/tel4vn/fins-microservices/service"
 	"nhooyr.io/websocket"
 )
 
 const (
 	AUTHEN_TOKEN = "authen_token"
-	AGENT_INFO   = "agent_info"
-)
-
-var (
-	AAA_URL = "https://api.dev.fins.vn/aaa"
+	USER_INFO    = "user_info"
 )
 
 func AuthMiddleware(c *gin.Context) *model.AAAResponse {
 	bssAuthRequest := model.BssAuthRequest{
 		Token:   c.Query("token"),
-		AuthUrl: c.Query("auth_url"),
+		AuthUrl: c.Query("auth-url"),
 		Source:  c.Query("source"),
 	}
 
-	if len(c.GetHeader("validator_header")) > 0 {
+	if len(c.GetHeader("validator-header")) > 0 {
 		bssAuthRequest = model.BssAuthRequest{
 			Token:   c.GetHeader("token"),
-			AuthUrl: c.GetHeader("auth_url"),
+			AuthUrl: c.GetHeader("auth-url"),
 			Source:  c.GetHeader("source"),
 		}
 	}
+
+	log.Info("bssAuthRequest: ", &bssAuthRequest)
 
 	res := AAAMiddleware(c, bssAuthRequest)
 
@@ -92,7 +91,7 @@ func RequestAAA(ctx *gin.Context, bssAuthRequest model.BssAuthRequest) (result *
 		SetHeader("Authorization", "Bearer "+bssAuthRequest.Token).
 		SetBody(body).
 		SetResult(result).
-		Post(bssAuthRequest.AuthUrl)
+		Post(service.OTT_URL + "/aaa")
 	if err != nil {
 		return nil, err
 	}
@@ -110,22 +109,26 @@ func RequestAuthen(ctx *gin.Context, bssAuthRequest model.BssAuthRequest) (resul
 		SetHeader("Authorization", "Bearer "+bssAuthRequest.Token).
 		Get(urlInfo)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	var resInfo map[string]any
 	if err := json.Unmarshal(res.Body(), &resInfo); err != nil {
+		log.Error(err)
 		return result, err
 	}
+	log.Info("resInfo: ", &resInfo)
 	userUuid, _ := resInfo["user_uuid"].(string)
 	if len(userUuid) < 1 {
+		log.Errorf("userUuid %s is invalid", userUuid)
 		return nil, errors.New("invalid user uuid")
 	}
 
-	// Get Info agent
-	agentInfo := model.AuthUserInfo{}
-	agentInfoCache := cache.MCache.Get(AGENT_INFO + "_" + bssAuthRequest.Token)
-	if agentInfoCache != nil {
-		if err := util.ParseAnyToAny(agentInfoCache, &agentInfo); err != nil {
+	// Get Info user
+	userInfo := model.AuthUserInfo{}
+	userInfoCache := cache.MCache.Get(USER_INFO + "_" + bssAuthRequest.Token)
+	if userInfoCache != nil {
+		if err := util.ParseAnyToAny(userInfoCache, &userInfo); err != nil {
 			log.Error(err)
 			return nil, err
 		}
@@ -136,47 +139,50 @@ func RequestAuthen(ctx *gin.Context, bssAuthRequest model.BssAuthRequest) (resul
 			SetHeader("Authorization", "Bearer "+bssAuthRequest.Token).
 			Get(url)
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 		var resp map[string]any
 		if err := json.Unmarshal(res.Body(), &resp); err != nil {
+			log.Error(err)
 			return result, err
 		}
 
-		agentInfo.UserUuid, _ = resp["user_uuid"].(string)
-		agentInfo.DomainUuid, _ = resp["domain_uuid"].(string)
-		agentInfo.Username, _ = resp["username"].(string)
-		agentInfo.Password, _ = resp["password"].(string)
-		agentInfo.ApiKey, _ = resp["api_key"].(string)
-		agentInfo.UserEnabled, _ = resp["user_enabled"].(string)
-		agentInfo.UserStatus, _ = resp["user_status"].(string)
-		agentInfo.Level, _ = resp["level"].(string)
-		agentInfo.LastName, _ = resp["last_name"].(string)
-		agentInfo.MiddleName, _ = resp["middle_name"].(string)
-		agentInfo.FirstName, _ = resp["first_name"].(string)
-		agentInfo.UnitUuid, _ = resp["unit_uuid"].(string)
-		agentInfo.UnitName, _ = resp["unit_name"].(string)
-		agentInfo.RoleUuid, _ = resp["role_uuid"].(string)
-		agentInfo.Extension, _ = resp["extension"].(string)
-		agentInfo.ExtensionUuid, _ = resp["extension_uuid"].(string)
+		userInfo.UserUuid, _ = resp["user_uuid"].(string)
+		userInfo.DomainUuid, _ = resp["domain_uuid"].(string)
+		userInfo.Username, _ = resp["username"].(string)
+		userInfo.Password, _ = resp["password"].(string)
+		userInfo.ApiKey, _ = resp["api_key"].(string)
+		userInfo.UserEnabled, _ = resp["user_enabled"].(string)
+		userInfo.UserStatus, _ = resp["user_status"].(string)
+		userInfo.Level, _ = resp["level"].(string)
+		userInfo.LastName, _ = resp["last_name"].(string)
+		userInfo.MiddleName, _ = resp["middle_name"].(string)
+		userInfo.FirstName, _ = resp["first_name"].(string)
+		userInfo.UnitUuid, _ = resp["unit_uuid"].(string)
+		userInfo.UnitName, _ = resp["unit_name"].(string)
+		userInfo.RoleUuid, _ = resp["role_uuid"].(string)
+		userInfo.Extension, _ = resp["extension"].(string)
+		userInfo.ExtensionUuid, _ = resp["extension_uuid"].(string)
 
-		cache.MCache.Set(AGENT_INFO+"_"+bssAuthRequest.Token, agentInfo, 1*time.Minute)
+		cache.MCache.Set(USER_INFO+"_"+bssAuthRequest.Token, userInfo, 3*time.Minute)
 	}
 
-	if len(agentInfo.UserUuid) > 1 {
+	if len(userInfo.UserUuid) > 1 {
 		result = &model.AAAResponse{
 			Data: &model.AuthUser{
-				TenantId: agentInfo.DomainUuid,
-				UserId:   agentInfo.UserUuid,
-				Username: agentInfo.Username,
-				Level:    agentInfo.Level,
+				TenantId: userInfo.DomainUuid,
+				UserId:   userInfo.UserUuid,
+				Username: userInfo.Username,
+				Level:    userInfo.Level,
 				Source:   bssAuthRequest.Source,
 				Token:    bssAuthRequest.Token,
-				UnitUuid: agentInfo.UnitUuid,
+				UnitUuid: userInfo.UnitUuid,
+				Fullname: userInfo.FirstName + " " + userInfo.MiddleName + " " + userInfo.LastName,
 			},
 		}
 	} else {
-		cache.MCache.Del(AGENT_INFO + "_" + bssAuthRequest.Token)
+		cache.MCache.Del(USER_INFO + "_" + bssAuthRequest.Token)
 		return nil, fmt.Errorf("failed to get user info")
 	}
 

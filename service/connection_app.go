@@ -49,7 +49,7 @@ func (s *ChatConnectionApp) InsertChatConnectionApp(ctx context.Context, authUse
 	}
 
 	if len(data.QueueId) > 0 {
-		_, err = repository.ChatQueueAgentRepo.GetById(ctx, dbCon, data.QueueId)
+		_, err = repository.ChatQueueUserRepo.GetById(ctx, dbCon, data.QueueId)
 		if err != nil {
 			log.Error(err)
 			return connectionApp.Id, err
@@ -104,7 +104,7 @@ func (s *ChatConnectionApp) InsertChatConnectionApp(ctx context.Context, authUse
 
 	// Step belows apply when app is available
 	// Call ott, if fail => roll back
-	if err := common.PostOttAccount(OTT_URL, (*app)[0], connectionApp); err != nil {
+	if err := common.PostOttAccount(OTT_URL, OTT_VERSION, (*app)[0], connectionApp); err != nil {
 		log.Error(err)
 		return connectionApp.Id, err
 	}
